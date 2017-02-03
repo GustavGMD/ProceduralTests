@@ -10,6 +10,11 @@ public class MeshGenerator : MonoBehaviour
     //bezier public test curve variables
     public bool enableCurveTesting = false;
     public int samplingRate = 100;
+    public int heightSize = 30;
+    /// <summary>
+    /// Use odd numbers for simetry
+    /// </summary>
+    public int widthSize = 11;
     public GameObject[] controlPoints;
 
     // Use this for initialization
@@ -21,7 +26,7 @@ public class MeshGenerator : MonoBehaviour
         {
             __controlPoints[i] = controlPoints[i].transform.position;
         }
-        meshTarget.mesh = GenerateEvenlySpacedCurveCenteredBasedRectangularMesh(__controlPoints, 30);
+        meshTarget.mesh = GenerateEvenlySpacedCurveCenteredBasedRectangularMesh(__controlPoints, heightSize);
     }
 
     // Update is called once per frame
@@ -43,7 +48,7 @@ public class MeshGenerator : MonoBehaviour
             GetComponent<LineRenderer>().numPositions = samplingRate;
             GetComponent<LineRenderer>().SetPositions(__points);
 
-            meshTarget.mesh = GenerateEvenlySpacedCurveCenteredBasedRectangularMesh(__controlPoints, 30);
+            meshTarget.mesh = GenerateEvenlySpacedCurveCenteredBasedRectangularMesh(__controlPoints, heightSize);
         }
     }
 
@@ -153,7 +158,7 @@ public class MeshGenerator : MonoBehaviour
         int height = 22;
         int trianglesNum = (width - 1) * (height - 1) * 2;
         //one extra point to calculate the angle for the last point we are using
-        Vector3[] curvePoints = new Vector3[height + 1];
+        Vector3[] curvePoints = new Vector3[height];
 
         #region Initialize Curve Points
         for (int i = 0; i < curvePoints.Length; i++)
@@ -165,8 +170,17 @@ public class MeshGenerator : MonoBehaviour
         #region Vertices
         for (int i = 0; i < height; i++)
         {
-            Vector3 __direction = (curvePoints[i + 1] - curvePoints[i]);
-            float __angle = Mathf.Atan2(__direction.z, __direction.x) - (Mathf.PI / 2); //rad
+            Vector3 __direction;
+            float __angle;
+            if (i < height - 1)
+            {
+                __direction = (curvePoints[i + 1] - curvePoints[i]);
+            }
+            else
+            {
+                __direction = (curvePoints[i] - curvePoints[i-1]);                
+            }
+            __angle = Mathf.Atan2(__direction.z, __direction.x) - (Mathf.PI / 2); //rad
             Debug.Log(__angle * Mathf.Rad2Deg);
             //j is the position in the X axis, while i is the position in the Z axis
             for (int j = 0; j < width; j++)
@@ -257,18 +271,27 @@ public class MeshGenerator : MonoBehaviour
         List<Vector3> newNormals = new List<Vector3>();
 
         //temp setup parameters for testing
-        int width = 11;
+        int width = widthSize;
         int height = p_height;
         int trianglesNum = (width - 1) * (height - 1) * 2;
         //one extra point to calculate the angle for the last point we are using
-        Vector3[] curvePoints = GetEvenlySpacedBezerCurvePoints(p_curveControlPoints, height + 1, 0, 1);
+        Vector3[] curvePoints = GetEvenlySpacedBezerCurvePoints(p_curveControlPoints, height, 0, 1);
 
         #region Vertices
         for (int i = 0; i < height; i++)
         {
-            Vector3 __direction = (curvePoints[i + 1] - curvePoints[i]);
-            float __angle = Mathf.Atan2(__direction.z, __direction.x) - (Mathf.PI / 2); //rad
-            Debug.Log(__angle * Mathf.Rad2Deg);
+            Vector3 __direction;
+            float __angle;
+            if (i < height - 1)
+            {
+                __direction = (curvePoints[i + 1] - curvePoints[i]);
+            }
+            else
+            {
+                __direction = (curvePoints[i] - curvePoints[i - 1]);
+            }
+            __angle = Mathf.Atan2(__direction.z, __direction.x) - (Mathf.PI / 2); //rad
+            //Debug.Log(__angle * Mathf.Rad2Deg);
             //j is the position in the X axis, while i is the position in the Z axis
             for (int j = 0; j < width; j++)
             {
@@ -352,7 +375,7 @@ public class MeshGenerator : MonoBehaviour
 
     public Vector3[] GetEvenlySpacedBezerCurvePoints(Vector3[] p_controlPoints, int p_amountOfPoints, float p_minT, float p_maxT)
     {
-        int __samplingRate = 1000;
+        int __samplingRate = samplingRate;
         Vector3[] __sampledCurvePoints = new Vector3[__samplingRate];
         float __curveLenght = 0;
         float __curveLenghtPerPoint = 0;
@@ -371,22 +394,26 @@ public class MeshGenerator : MonoBehaviour
             __curveLenght += (__sampledCurvePoints[i + 1] - __sampledCurvePoints[i]).magnitude;
         }
 
-        __curveLenghtPerPoint = __curveLenght / p_amountOfPoints;
+        __curveLenghtPerPoint = __curveLenght / (p_amountOfPoints-1);
+        Debug.Log(__curveLenght + " " + p_amountOfPoints + " " + __curveLenghtPerPoint);
 
         __evenlySpacedPoints.Add(__sampledCurvePoints[0]);
         for (int i = 0; i < __samplingRate - 1; i++)
         {
             if (__sum >= __curveLenghtPerPoint)
             {
+                Debug.Log("target value: " + __curveLenghtPerPoint + " Sum value: " + __sum);
                 __evenlySpacedPoints.Add(__sampledCurvePoints[i]);
                 __sum = 0;
             }
             __sum += (__sampledCurvePoints[i + 1] - __sampledCurvePoints[i]).magnitude;
         }
-        if (__sum >= __curveLenghtPerPoint * 0.5)
-        {
+        //if (__sum >= __curveLenghtPerPoint * 0.5)
+        //{
             __evenlySpacedPoints.Add(__sampledCurvePoints[__sampledCurvePoints.Length - 1]);
-        }
+        //}
+
+        Debug.Log(__evenlySpacedPoints.Count);
 
         return __evenlySpacedPoints.ToArray();
     }
